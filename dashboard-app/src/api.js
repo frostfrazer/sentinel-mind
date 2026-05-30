@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'https://sentinel-mind-9iyt.onrender.com'
 
 const getHeaders = () => {
   const token = localStorage.getItem('sm_token')
