@@ -1,9 +1,26 @@
 import pytest
 import httpx
 from api.main import app
+from api.auth.database import init_db, AsyncSessionLocal
+from api.auth.service import create_user, hash_and_store_key
 
 BASE = "http://localhost:8000"
-HEADERS = {"X-API-Key": "dev-test-key"}
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _init_test_db():
+    await init_db()
+
+
+@pytest.fixture
+async def auth_headers():
+    """Creates a real user + API key in the test DB and returns auth headers."""
+    async with AsyncSessionLocal() as db:
+        import uuid
+        email = f"test-{uuid.uuid4().hex[:8]}@example.com"
+        user = await create_user(db, email=email, password="testpass123", full_name="Test User")
+        raw_key = await hash_and_store_key(db, user.id, "test-key")
+    return {"X-API-Key": raw_key}
 
 @pytest.mark.asyncio
 async def test_root():
@@ -44,12 +61,12 @@ async def test_shield_soc_ping():
         assert r.status_code == 200
 
 @pytest.mark.asyncio
-async def test_phish_url_scan():
+async def test_phish_url_scan(auth_headers):
     async with httpx.AsyncClient(app=app, base_url=BASE) as client:
         r = await client.post(
             "/v1/shield-phish/scan/url",
             json={"url": "http://paypa1-secure-login.xyz/verify"},
-            headers=HEADERS
+            headers=auth_headers
         )
         assert r.status_code == 200
         data = r.json()
@@ -58,7 +75,7 @@ async def test_phish_url_scan():
         assert "threat_level" in data
 
 @pytest.mark.asyncio
-async def test_dev_code_scan():
+async def test_dev_code_scan(auth_headers):
     async with httpx.AsyncClient(app=app, base_url=BASE) as client:
         r = await client.post(
             "/v1/shield-dev/scan/code",
@@ -67,7 +84,7 @@ async def test_dev_code_scan():
                 "language": "python",
                 "filename": "auth.py"
             },
-            headers=HEADERS
+            headers=auth_headers
         )
         assert r.status_code == 200
         data = r.json()
@@ -75,7 +92,7 @@ async def test_dev_code_scan():
         assert "risk_score" in data
 
 @pytest.mark.asyncio
-async def test_soc_log_analysis():
+async def test_soc_log_analysis(auth_headers):
     async with httpx.AsyncClient(app=app, base_url=BASE) as client:
         r = await client.post(
             "/v1/shield-soc/analyze/logs",
@@ -89,7 +106,7 @@ async def test_soc_log_analysis():
                 "source": "auth_logs",
                 "timeframe_minutes": 5
             },
-            headers=HEADERS
+            headers=auth_headers
         )
         assert r.status_code == 200
         data = r.json()
