@@ -1,5 +1,6 @@
 import uuid
 import anthropic
+from fastapi import HTTPException
 from api.core.config import settings
 from api.models.schemas import ShieldDevResult, ThreatLevel
 
@@ -55,8 +56,4 @@ Respond in JSON only:
             scan_id=str(uuid.uuid4())
         )
     except Exception as e:
-        return ShieldDevResult(
-            vulnerabilities=[], secrets_found=[], risk_score=0.0,
-            threat_level=ThreatLevel.SAFE, fix_suggestions=[str(e)],
-            scan_id=str(uuid.uuid4())
-        )
+        raise HTTPException(status_code=502, detail=f"Scan engine unavailable: {str(e)}")

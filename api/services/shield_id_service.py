@@ -1,6 +1,7 @@
 import uuid
 import base64
 import anthropic
+from fastapi import HTTPException
 from api.core.config import settings
 from api.models.schemas import ShieldIDResult, ThreatLevel
 
@@ -49,12 +50,7 @@ Respond in JSON only:
             scan_id=str(uuid.uuid4())
         )
     except Exception as e:
-        return ShieldIDResult(
-            is_synthetic=False, confidence=0.0,
-            threat_level=ThreatLevel.SAFE, signals=[f"Analysis error: {str(e)}"],
-            recommendation="Retry or escalate to manual review",
-            scan_id=str(uuid.uuid4())
-        )
+        raise HTTPException(status_code=502, detail=f"Scan engine unavailable: {str(e)}")
 
 async def analyze_document(document_base64: str, doc_type: str = "id_card") -> ShieldIDResult:
     prompt = f"""You are a document forgery detection AI. Analyze this {doc_type} for:
@@ -91,8 +87,4 @@ Respond in JSON only:
             scan_id=str(uuid.uuid4())
         )
     except Exception as e:
-        return ShieldIDResult(
-            is_synthetic=False, confidence=0.0,
-            threat_level=ThreatLevel.SAFE, signals=[str(e)],
-            recommendation="Retry scan", scan_id=str(uuid.uuid4())
-        )
+        raise HTTPException(status_code=502, detail=f"Scan engine unavailable: {str(e)}")

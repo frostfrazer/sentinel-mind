@@ -1,5 +1,6 @@
 import uuid
 import anthropic
+from fastapi import HTTPException
 from api.core.config import settings
 from api.models.schemas import ShieldPhishResult, ThreatLevel
 
@@ -51,11 +52,7 @@ Respond in JSON only:
             scan_id=str(uuid.uuid4())
         )
     except Exception as e:
-        return ShieldPhishResult(
-            is_phishing=False, confidence=0.0, threat_level=ThreatLevel.SAFE,
-            attack_type=None, signals=[str(e)],
-            recommendation="Manual review", scan_id=str(uuid.uuid4())
-        )
+        raise HTTPException(status_code=502, detail=f"Scan engine unavailable: {str(e)}")
 
 async def analyze_url(url: str, context: str = "") -> ShieldPhishResult:
     prompt = f"""You are a URL threat intelligence AI. Analyze this URL for phishing/malware:
@@ -93,8 +90,4 @@ Respond in JSON only:
             scan_id=str(uuid.uuid4())
         )
     except Exception as e:
-        return ShieldPhishResult(
-            is_phishing=False, confidence=0.0, threat_level=ThreatLevel.SAFE,
-            attack_type=None, signals=[str(e)],
-            recommendation="Manual review", scan_id=str(uuid.uuid4())
-        )
+        raise HTTPException(status_code=502, detail=f"Scan engine unavailable: {str(e)}")
